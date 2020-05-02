@@ -191,9 +191,9 @@ def list_ciphers(given_algo: str):
     detected_hka, weak_hka = detect_algo(given_algo, all_hka, strong_hka)
 
     compression = False
-    aaa = re.search("zlib@openssh.com", given_algo)
-    if aaa:
+    if re.search("zlib@openssh.com", given_algo):
         compression = True
+
     print('    [+] Detected the following ciphers: ')
     print_columns(detected_ciphers)
     print('    [+] Detected the following KEX algorithms: ')
