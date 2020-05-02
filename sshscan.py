@@ -164,32 +164,44 @@ def list_ciphers(given_algo: str):
     if not given_algo:
         return False
 
-    all_ciphers = ['3des-cbc', 'aes128-cbc', 'aes192-cbc', 'aes256-cbc', 'aes128-ctr', 'aes192-ctr', 'aes256-ctr',
-                   'aes128-gcm@openssh.com', 'aes256-gcm@openssh.com', 'arcfour', 'arcfour128', 'arcfour256',
-                   'blowfish-cbc', 'cast128-cbc', 'chacha20-poly1305@openssh.com']
+    all_ciphers = ['3des', '3des-cbc', 'acss@openssh.org', 'aes128-cbc', 'aes128-ctr', 'aes128-gcm@openssh.com',
+                   'aes192-cbc', 'aes192-ctr', 'aes256-cbc', 'aes256-ctr', 'aes256-gcm@openssh.com', 'arcfour',
+                   'arcfour128', 'arcfour256', 'blowfish', 'blowfish-cbc', 'cast128-cbc',
+                   'chacha20-poly1305@openssh.com', 'rijndael-cbc@lysator.liu.se']
     strong_ciphers = ['chacha20-poly1305@openssh.com', 'aes256-gcm@openssh.com', 'aes128-gcm@openssh.com',
                       'aes256-ctr', 'aes192-ctr', 'aes128-ctr']
 
-    all_macs = ['hmac-md5', 'hmac-md5-96', 'hmac-ripemd160', 'hmac-sha1', 'hmac-sha1-96', 'hmac-sha2-256',
-                'hmac-sha2-512', 'umac-64', 'hmac-md5-etm@openssh.com', 'hmac-md5-96-etm@openssh.com',
-                'hmac-ripemd160-etm@openssh.com', 'hmac-sha1-etm@openssh.com', 'hmac-sha1-96-etm@openssh.com',
-                'hmac-sha2-256-etm@openssh.com', 'hmac-sha2-512-etm@openssh.com', 'umac-64-etm@openssh.com',
-                'umac-128-etm@openssh.com']
+    all_macs = ['hmac-md5', 'hmac-md5-96', 'hmac-md5-96-etm@openssh.com', 'hmac-md5-etm@openssh.com', 'hmac-ripemd160',
+                'hmac-ripemd160-etm@openssh.com', 'hmac-ripemd160@openssh.com', 'hmac-sha1', 'hmac-sha1-96',
+                'hmac-sha1-96-etm@openssh.com', 'hmac-sha1-etm@openssh.com', 'hmac-sha2-256',
+                'hmac-sha2-256-etm@openssh.com', 'hmac-sha2-512', 'hmac-sha2-512-etm@openssh.com',
+                'hmac-sha256-96@ssh.com', 'hmac-sha256@ssh.com', 'umac-128-etm@openssh.com', 'umac-128@openssh.com',
+                'umac-64-etm@openssh.com', 'umac-64@openssh.com']
     strong_macs = ['hmac-sha2-512-etm@openssh.com', 'hmac-sha2-256-etm@openssh.com', 'umac-128',
                    'umac-128-etm@openssh.com', 'hmac-sha2-512', 'hmac-sha2-256', 'umac-128@openssh.com']
 
-    all_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group1-sha1',
-               'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha1',
-               'diffie-hellman-group-exchange-sha256', 'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521',
+    all_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha1',
+               'diffie-hellman-group-exchange-sha256', 'diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1',
+               'diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512',
+               'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521',
                'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384-cert-v01@openssh.com',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com']
+               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'sntrup4591761x25519-sha512@tinyssh.org']
     strong_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha256']
 
-    all_hka = ['ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384-cert-v01@openssh.com',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com',
-               'ssh-rsa-cert-v01@openssh.com', 'ssh-dss-cert-v01@openssh.com', 'ssh-rsa-cert-v00@openssh.com',
-               'ssh-dss-cert-v00@openssh.com', 'ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp384', 'ecdsa-sha2-nistp521',
-               'ssh-ed25519', 'ssh-rsa', 'ssh-dss']
+    all_hka = ['ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384',
+               'ecdsa-sha2-nistp384-cert-v01@openssh.com', 'ecdsa-sha2-nistp521',
+               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'rsa-sha2-256', 'rsa-sha2-256-cert-v01@openssh.com',
+               'rsa-sha2-512', 'rsa-sha2-512-cert-v01@openssh.com', 'sk-ecdsa-sha2-nistp256-cert-v01@openssh.com',
+               'sk-ecdsa-sha2-nistp256@openssh.com', 'sk-ssh-ed25519-cert-v01@openssh.com',
+               'sk-ssh-ed25519@openssh.com', 'ssh-dss', 'ssh-dss-cert-v00@openssh.com', 'ssh-dss-cert-v01@openssh.com',
+               'ssh-dss-sha224@ssh.com', 'ssh-dss-sha256@ssh.com', 'ssh-dss-sha384@ssh.com', 'ssh-dss-sha512@ssh.com',
+               'ssh-ed25519', 'ssh-ed25519-cert-v01@openssh.com', 'ssh-rsa', 'ssh-rsa-cert-v00@openssh.com',
+               'ssh-rsa-cert-v01@openssh.com', 'ssh-rsa-sha224@ssh.com', 'ssh-rsa-sha256@ssh.com',
+               'ssh-rsa-sha384@ssh.com', 'ssh-rsa-sha512@ssh.com', 'ssh-xmss-cert-v01@openssh.com',
+               'ssh-xmss@openssh.com', 'x509v3-sign-dss', 'x509v3-sign-dss-sha224@ssh.com',
+               'x509v3-sign-dss-sha256@ssh.com', 'x509v3-sign-dss-sha384@ssh.com', 'x509v3-sign-dss-sha512@ssh.com',
+               'x509v3-sign-rsa', 'x509v3-sign-rsa-sha224@ssh.com', 'x509v3-sign-rsa-sha256@ssh.com',
+               'x509v3-sign-rsa-sha384@ssh.com', 'x509v3-sign-rsa-sha512@ssh.com']
     strong_hka = ['ssh-rsa-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com',
                   'ssh-rsa-cert-v00@openssh.com', 'ssh-rsa', 'ssh-ed25519']
 
