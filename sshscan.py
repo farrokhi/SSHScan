@@ -152,6 +152,14 @@ def list_parser(list):
         sys.exit(2)
 
 
+def print_weak_algo(weak_algo: list, algo_type: str):
+    if weak_algo:
+        print('    [+] Detected the following weak %s: ' % algo_type)
+        print_columns(weak_algo)
+    else:
+        print('    [-] No weak %s detected!' % algo_type)
+
+
 def list_ciphers(given_algo: str):
     if not given_algo:
         return False
@@ -190,10 +198,6 @@ def list_ciphers(given_algo: str):
     detected_kex, weak_kex = detect_algo(given_algo, all_kex, strong_kex)
     detected_hka, weak_hka = detect_algo(given_algo, all_hka, strong_hka)
 
-    compression = False
-    if re.search("zlib@openssh.com", given_algo):
-        compression = True
-
     print('    [+] Detected the following ciphers: ')
     print_columns(detected_ciphers)
     print('    [+] Detected the following KEX algorithms: ')
@@ -203,31 +207,12 @@ def list_ciphers(given_algo: str):
     print('    [+] Detected the following HostKey algorithms: ')
     print_columns(detected_hka)
 
-    if weak_ciphers:
-        print('    [+] Detected the following weak ciphers: ')
-        print_columns(weak_ciphers)
-    else:
-        print('    [-] No weak ciphers detected!')
+    print_weak_algo(weak_ciphers, 'ciphers')
+    print_weak_algo(weak_kex, 'KEX algorithms')
+    print_weak_algo(weak_macs, 'MACs')
+    print_weak_algo(weak_hka, 'HostKey algorithms')
 
-    if weak_kex:
-        print('    [+] Detected the following weak KEX algorithms: ')
-        print_columns(weak_kex)
-    else:
-        print('    [-] No weak KEX detected!')
-
-    if weak_macs:
-        print('    [+] Detected the following weak MACs: ')
-        print_columns(weak_macs)
-    else:
-        print('    [-] No weak MACs detected!')
-
-    if weak_hka:
-        print('    [+] Detected the following weak HostKey algorithms: ')
-        print_columns(weak_hka)
-    else:
-        print('    [-] No weak HostKey algorithms detected!')
-
-    if compression:
+    if re.search('zlib@openssh.com', given_algo):
         print('    [+] Compression is enabled')
     else:
         print('    [-] Compression is *not* enabled')
