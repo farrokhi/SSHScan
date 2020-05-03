@@ -22,7 +22,8 @@ Usage:
 
 Sample output:
 ```
-% ./sshscan.py  sdf.org                                                   (master ?)
+% ./sshscan.py  sdf.org
+
 [*] Initiating scan for sdf.org on port 22
 [*] Connected to sdf.org on port 22...
     [+] Target SSH version is: SSH-2.0-OpenSSH_8.0
