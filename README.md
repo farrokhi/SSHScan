@@ -1,14 +1,25 @@
 SSHScan
 =======
 
-SSHScan is a testing tool that enumerates SSH Ciphers.<br>
-Using SSHScan, weak ciphers can be easily detected.
+SSHScan is an remote auditing tool that enumerates SSH Ciphers.
+It can also helps identify if any weak ciphers are enabled.
 
 Usage
 =====
 
-You can install SSHScan by cloning the [Git](https://github.com/evict/SSHScan) repository:<br>
-`git clone https://github.com/evict/SSHScan SSHScan`
+Note: SSHScan requires Python 3 and has no dependency on third-party packages.
 
-To get a list of basic options use: <br>
-`python sshscan.py -h`
+Installation:
+
+```
+git clone https://github.com/farrokhi/SSHScan
+```
+
+Usage:
+```
+./sshscan.py host.example.com:22
+```
+
+-----
+This is originally based on https://github.com/evict/SSHScan
+
