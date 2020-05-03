@@ -2,6 +2,7 @@
 # The MIT License (MIT)
 #
 # Copyright (c) 2017 Vincent Ruijter
+# Copyright (c) 2020 Babak Farrokhi
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -24,26 +25,13 @@
 # Cipher detection based on: https://stribika.github.io/2015/01/04/secure-secure-shell.html
 #
 
-import sys
 import re
 import socket
-from optparse import OptionParser, OptionGroup
-
-
-def banner():
-    logo = '''
-      _____ _____ _    _ _____
-     /  ___/  ___| | | /  ___|
-     \ `--.\ `--.| |_| \ `--.  ___ __ _ _ __
-      `--. \`--. |  _  |`--. \/ __/ _` | '_ \\
-     /\__/ /\__/ | | | /\__/ | (_| (_| | | | |
-     \____/\____/\_| |_\____/ \___\__,_|_| |_|
-                                            evict
-                '''
-    return logo
+import sys
 
 
 def exchange(ip: str, port: int) -> str:
+    ciphers = ''
     try:
         conn = socket.create_connection((ip, port), timeout=5)
         print("[*] Connected to %s on port %i..." % (ip, port))
@@ -54,116 +42,42 @@ def exchange(ip: str, port: int) -> str:
         ciphers = conn.recv(984).decode(errors='ignore')
         conn.close()
 
-        return ciphers
-
     except Exception as e:
-        print(e)
-    except socket.timeout:
-        print("    [-] Timeout while connecting to %s on port %i\n" % (ip, port))
-        return ""
+        print("[-] Error while connecting to %s on port %i: %s" % (ip, port, e))
 
-    except socket.error as e:
-        if e.errno == 61:
-            print("    [-] %s\n" % e.strerror)
-            pass
-        else:
-            print("    [-] Error while connecting to %s on port %i\n" % (ip, port))
-            return ''
+    return ciphers
 
 
-def validate_target(target):
-    target_list = target.split(":")
-    if len(target_list) != 1 and len(target_list) != 2:  # only valid states
-        print("[-] %s is not a valid target!" % target)
-        return False
-    hostname = target_list[0]
-    if len(hostname) > 255:
-        print("[-] %s is not a valid target!" % target)
-        return False
-    if hostname[-1] == ".":
-        hostname = hostname[:-1]  # strip exactly one dot from the right, if present
-    allowed = re.compile('(?!-)[A-Z\d-]{1,63}(?<!-)$', re.IGNORECASE)
-    if not all(allowed.match(x) for x in hostname.split(".")):
-        print("[-] %s is not a valid target!" % target)
-        return False
-    if len(target_list) == 2:  # there is a specific port indication
-        port = target_list[1]
-        try:
-            validport = int(port)
-            if validport < 1 or validport > 65535:
-                print("[-] %s is not a valid target!" % target)
-                return False
-        except ValueError:
-            print("[-] %s is not a valid target!" % target)
-            return False
-    return target
-
-
-def parse_target(target):
-    if validate_target(target):
-
-        if not re.search(r'[:*]', target):
-            print("[*] Target %s specified without a port number, using default port 22" % target)
-            target = target + ':22'
-
-        ipport = target.split(':')
-
-        try:
-            print("[*] Initiating scan for %s on port %s" % (ipport[0], ipport[1]))
-            detected_ciphers = exchange(ipport[0], int(ipport[1]))
-            if not list_ciphers(detected_ciphers):
-                return False
-
-        except IndexError:
-            print("    [-] Please specify target as 'target:port'!\n")
-            return False
-
-        except ValueError:
-            print("    [-] Target port error, please specify a valid port!\n")
-            return False
-
-
-def list_parser(list):
-    try:
-        fd = open(list, 'r')
-        targetlist = fd.read().split('\n')
-        targets = []
-        for target in targetlist:
-            if target:
-                targets.append(target)
-
-        print("[*] List contains %i targets to scan" % len(targets))
-
-        error = 0
-        for target in targets:
-            if parse_target(target) == False:
-                error += 1
-        if error > 0:
-            if error == len(targets):
-                print("[*] Scan failed for all %i hosts!" % len(targets))
-            else:
-                print("[*] Scan completed for %i out of %i targets!" % ((len(targets) - error), len(targets)))
-
-    except IOError as e:
-        if e.filename:
-            print("[-] %s: '%s'" % (e.strerror, e.filename))
-        else:
-            print("[-] %s" % e.strerror)
-        sys.exit(2)
-
-
-def print_weak_algo(weak_algo: list, algo_type: str):
-    if weak_algo:
-        print('    [+] Detected the following weak %s: ' % algo_type)
-        print_columns(weak_algo)
+def scan_target(target):
+    if ':' in target:
+        host, port = target.split(':')
     else:
-        print('    [-] No weak %s detected!' % algo_type)
+        host = target
+        port = 22
+
+    print("[*] Initiating scan for %s on port %d" % (host, int(port)))
+    detected_ciphers = exchange(host, int(port))
+    if detected_ciphers:
+        display_result(detected_ciphers)
 
 
-def list_ciphers(given_algo: str):
-    if not given_algo:
-        return False
+def print_algo_list(algo_list: list, title: str):
+    if algo_list:
+        print('    [+] Detected %s: ' % title)
+        # adjust the amount of columns to display
+        cols = 2
+        while len(algo_list) % cols != 0:
+            algo_list.append('')
+        else:
+            split = [algo_list[i:i + len(algo_list) // cols] for i in
+                     range(0, len(algo_list), len(algo_list) // cols)]
+            for row in zip(*split):
+                print("          " + "".join(str.ljust(c, 37) for c in row))
+    else:
+        print('    [-] No %s detected!' % title)
 
+
+def display_result(given_algo: str):
     all_ciphers = ['3des', '3des-cbc', 'acss@openssh.org', 'aes128-cbc', 'aes128-ctr', 'aes128-gcm@openssh.com',
                    'aes192-cbc', 'aes192-ctr', 'aes256-cbc', 'aes256-ctr', 'aes256-gcm@openssh.com', 'arcfour',
                    'arcfour128', 'arcfour256', 'blowfish', 'blowfish-cbc', 'cast128-cbc',
@@ -202,34 +116,28 @@ def list_ciphers(given_algo: str):
                'x509v3-sign-dss-sha256@ssh.com', 'x509v3-sign-dss-sha384@ssh.com', 'x509v3-sign-dss-sha512@ssh.com',
                'x509v3-sign-rsa', 'x509v3-sign-rsa-sha224@ssh.com', 'x509v3-sign-rsa-sha256@ssh.com',
                'x509v3-sign-rsa-sha384@ssh.com', 'x509v3-sign-rsa-sha512@ssh.com']
-    strong_hka = ['ssh-rsa-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com',
-                  'ssh-rsa-cert-v00@openssh.com', 'ssh-rsa', 'ssh-ed25519']
+    strong_hka = ['ssh-rsa-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com', 'ssh-rsa-cert-v00@openssh.com',
+                  'ssh-rsa', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512']
 
     detected_macs, weak_macs = detect_algo(given_algo, all_macs, strong_macs)
     detected_ciphers, weak_ciphers = detect_algo(given_algo, all_ciphers, strong_ciphers)
     detected_kex, weak_kex = detect_algo(given_algo, all_kex, strong_kex)
     detected_hka, weak_hka = detect_algo(given_algo, all_hka, strong_hka)
 
-    print('    [+] Detected the following ciphers: ')
-    print_columns(detected_ciphers)
-    print('    [+] Detected the following KEX algorithms: ')
-    print_columns(detected_kex)
-    print('    [+] Detected the following MACs: ')
-    print_columns(detected_macs)
-    print('    [+] Detected the following HostKey algorithms: ')
-    print_columns(detected_hka)
+    print_algo_list(detected_ciphers, 'ciphers')
+    print_algo_list(detected_kex, 'KEX algorithms')
+    print_algo_list(detected_macs, 'MACs')
+    print_algo_list(detected_hka, 'HostKey algorithms')
 
-    print_weak_algo(weak_ciphers, 'ciphers')
-    print_weak_algo(weak_kex, 'KEX algorithms')
-    print_weak_algo(weak_macs, 'MACs')
-    print_weak_algo(weak_hka, 'HostKey algorithms')
+    print_algo_list(weak_ciphers, 'weak ciphers')
+    print_algo_list(weak_kex, 'weak KEX algorithms')
+    print_algo_list(weak_macs, 'weak MACs')
+    print_algo_list(weak_hka, 'weak HostKey algorithms')
 
     if re.search('zlib@openssh.com', given_algo):
         print('    [+] Compression is enabled')
     else:
         print('    [-] Compression is *not* enabled')
-
-    return True
 
 
 def detect_algo(given_algo, all_algo, strong_algo):
@@ -244,47 +152,13 @@ def detect_algo(given_algo, all_algo, strong_algo):
     return _detected, _weak
 
 
-def print_columns(cipherlist):
-    # adjust the amount of columns to display
-    cols = 2
-    while len(cipherlist) % cols != 0:
-        cipherlist.append('')
-    else:
-        split = [cipherlist[i:i + len(cipherlist) // cols] for i in range(0, len(cipherlist), len(cipherlist) // cols)]
-        for row in zip(*split):
-            print("          " + "".join(str.ljust(c, 37) for c in row))
-
-
 def main():
-    try:
-        banner()
-        parser = OptionParser(usage="usage %prog [options]", version="%prog 1.0")
-        parameters = OptionGroup(parser, "Options")
+    if len(sys.argv) < 2:
+        print("[-] No target specified!")
+        print("Syntax: %s host.example.com[:22]" % sys.argv[0])
+        sys.exit(1)
 
-        parameters.add_option("-t", "--target", type="string",
-                              help="Specify target as 'target' or 'target:port' (port 22 is default)", dest="target")
-        parameters.add_option("-l", "--target-list", type="string",
-                              help="File with targets: 'target' or 'target:port' seperated by a newline (port 22 is default)",
-                              dest="targetlist")
-        parser.add_option_group(parameters)
-
-        options, arguments = parser.parse_args()
-
-        target = options.target
-        targetlist = options.targetlist
-
-        if target:
-            parse_target(target)
-        else:
-            if targetlist:
-                list_parser(targetlist)
-            else:
-                print("[-] No target specified!")
-                sys.exit(0)
-
-    except KeyboardInterrupt:
-        print("\n[-] ^C Pressed, quitting!")
-        sys.exit(3)
+    scan_target(sys.argv[1])
 
 
 if __name__ == '__main__':
