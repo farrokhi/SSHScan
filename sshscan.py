@@ -25,6 +25,7 @@
 # Cipher detection based on: https://stribika.github.io/2015/01/04/secure-secure-shell.html
 #
 
+import argparse
 import socket
 import struct
 import sys
@@ -357,12 +358,29 @@ def display_result(kexinit_data: Dict[str, Any]) -> None:
 
 def main() -> None:
     """Main entry point for the SSH scanner."""
-    if len(sys.argv) < 2:
-        print("[-] No target specified!")
-        print(f"Syntax: {sys.argv[0]} host.example.com[:22]")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description='SSH server cipher and algorithm scanner',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s github.com
+  %(prog)s example.com:22
+  %(prog)s [::1]:22
+  %(prog)s [2001:db8::1]:8022
+        """
+    )
+    parser.add_argument(
+        'target',
+        help='target SSH server (format: host[:port] or [ipv6]:port)'
+    )
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version='%(prog)s 1.0'
+    )
 
-    exit_code = scan_target(sys.argv[1])
+    args = parser.parse_args()
+    exit_code = scan_target(args.target)
     sys.exit(exit_code)
 
 

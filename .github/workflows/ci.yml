@@ -55,5 +55,5 @@ jobs:
 
     - name: Test script execution (help message)
       run: |
-        python3 sshscan.py || test $? -eq 1
-        python3 sshscan.py | grep -q "No target specified"
+        python3 sshscan.py -h
+        python3 sshscan.py --help | grep -q "SSH server cipher"
