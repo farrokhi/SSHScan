@@ -28,7 +28,7 @@
 import socket
 import struct
 import sys
-from typing import Optional, Tuple, List, Dict
+from typing import Any, Optional, Tuple, List, Dict
 
 
 # SSH Protocol Constants
@@ -152,7 +152,7 @@ def parse_ssh_packet(conn: socket.socket) -> bytes:
     return payload
 
 
-def parse_kexinit(payload: bytes) -> Dict[str, any]:
+def parse_kexinit(payload: bytes) -> Dict[str, Any]:
     """
     Parse SSH_MSG_KEXINIT message payload.
     Returns a dictionary with all the algorithm lists.
@@ -195,7 +195,7 @@ def parse_kexinit(payload: bytes) -> Dict[str, any]:
     }
 
 
-def exchange(ip: str, port: int) -> Optional[Dict[str, any]]:
+def exchange(ip: str, port: int) -> Optional[Dict[str, Any]]:
     """
     Connect to SSH server and retrieve KEXINIT data.
     Returns a dictionary with algorithm lists, or None on failure.
@@ -241,8 +241,8 @@ def validate_port(port_str: str) -> Tuple[Optional[int], Optional[str]]:
 
 def parse_target(target: str) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     """Parse target string to extract host and port, handling IPv6 addresses."""
-    port = 22
-    host = target
+    port: Optional[int] = 22
+    host: Optional[str] = target
 
     if target.startswith('['):
         bracket_end = target.find(']')
@@ -289,6 +289,10 @@ def scan_target(target: str) -> int:
         print("[-] Error: Hostname cannot be empty")
         return 1
 
+    if port is None:
+        print("[-] Error: Invalid port")
+        return 1
+
     print(f"[*] Initiating scan for {host} on port {port}")
     kexinit_data = exchange(host, port)
     if kexinit_data:
@@ -320,7 +324,7 @@ def detect_weak_algo(detected_list: List[str], strong_list: List[str]) -> List[s
     return [algo for algo in detected_list if algo not in strong_list]
 
 
-def display_result(kexinit_data: Dict[str, any]) -> None:
+def display_result(kexinit_data: Dict[str, Any]) -> None:
     """Display KEXINIT algorithm information and identify weak algorithms."""
     detected_ciphers = kexinit_data['encryption_algorithms_server_to_client']
     detected_kex = kexinit_data['kex_algorithms']
