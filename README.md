@@ -3,23 +3,43 @@ SSHScan
 
 [![CI](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml/badge.svg)](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml)
 
-SSHScan is an remote auditing tool that enumerates SSH Ciphers.
-It can also helps identify if any weak ciphers are enabled.
+SSHScan is a remote auditing tool that enumerates SSH server cryptographic algorithms. It helps identify weak or deprecated ciphers, key exchange algorithms, MACs, and host key algorithms.
+
+Requirements
+============
+
+SSHScan requires Python 3.8 or newer and has no dependency on third-party packages. It uses only the Python standard library.
+
+Installation
+============
+
+```bash
+git clone https://github.com/farrokhi/SSHScan
+cd SSHScan
+```
 
 Usage
 =====
 
-Note: SSHScan requires Python 3 and has no dependency on third-party packages.
-
-Installation:
-
-```
-git clone https://github.com/farrokhi/SSHScan
+Basic usage:
+```bash
+./sshscan.py host.example.com
 ```
 
-Usage:
+Specify a custom port:
+```bash
+./sshscan.py host.example.com:2222
 ```
-./sshscan.py host.example.com:22
+
+IPv6 addresses must be enclosed in brackets and quoted:
+```bash
+./sshscan.py '[2001:db8::1]:22'
+./sshscan.py '[::1]'
+```
+
+Display help:
+```bash
+./sshscan.py -h
 ```
 
 Sample output:
