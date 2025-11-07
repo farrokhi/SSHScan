@@ -28,13 +28,62 @@
 import socket
 import struct
 import sys
+from typing import Optional, Tuple, List, Dict
 
 
 # SSH Protocol Constants
 SSH_MSG_KEXINIT = 20
+MAX_PACKET_LENGTH = 1024 * 1024
+SSH_HEADER_LENGTH = 5
+KEXINIT_COOKIE_LENGTH = 16
+VERSION_STRING_MAX_LENGTH = 255
+
+# Strong algorithm lists based on security best practices
+STRONG_CIPHERS = [
+    'chacha20-poly1305@openssh.com',
+    'aes256-gcm@openssh.com',
+    'aes128-gcm@openssh.com',
+    'aes256-ctr',
+    'aes192-ctr',
+    'aes128-ctr'
+]
+
+STRONG_MACS = [
+    'hmac-sha2-512-etm@openssh.com',
+    'hmac-sha2-256-etm@openssh.com',
+    'umac-128',
+    'umac-128-etm@openssh.com',
+    'hmac-sha2-512',
+    'hmac-sha2-256',
+    'umac-128@openssh.com'
+]
+
+STRONG_KEX = [
+    'curve25519-sha256',
+    'curve25519-sha256@libssh.org',
+    'diffie-hellman-group-exchange-sha256',
+    'diffie-hellman-group14-sha256',
+    'diffie-hellman-group16-sha512',
+    'diffie-hellman-group18-sha512',
+    'sntrup761x25519-sha512@openssh.com',
+    'sntrup761x25519-sha512',
+    'mlkem768x25519-sha256',
+    'kex-strict-s-v00@openssh.com',
+    'ext-info-s'
+]
+
+STRONG_HOST_KEY_ALGORITHMS = [
+    'ssh-rsa-cert-v01@openssh.com',
+    'ssh-ed25519-cert-v01@openssh.com',
+    'ssh-rsa-cert-v00@openssh.com',
+    'ssh-rsa',
+    'ssh-ed25519',
+    'rsa-sha2-256',
+    'rsa-sha2-512'
+]
 
 
-def parse_uint32(data: bytes, offset: int) -> tuple:
+def parse_uint32(data: bytes, offset: int) -> Tuple[int, int]:
     """Parse a 4-byte big-endian unsigned integer. Returns (value, new_offset)."""
     if offset + 4 > len(data):
         raise ValueError("Insufficient data to parse uint32")
@@ -42,23 +91,23 @@ def parse_uint32(data: bytes, offset: int) -> tuple:
     return value, offset + 4
 
 
-def parse_byte(data: bytes, offset: int) -> tuple:
+def parse_byte(data: bytes, offset: int) -> Tuple[int, int]:
     """Parse a single byte. Returns (value, new_offset)."""
     if offset >= len(data):
         raise ValueError("Insufficient data to parse byte")
     return data[offset], offset + 1
 
 
-def parse_string(data: bytes, offset: int) -> tuple:
+def parse_string(data: bytes, offset: int) -> Tuple[bytes, int]:
     """Parse a length-prefixed string. Returns (string_bytes, new_offset)."""
     length, offset = parse_uint32(data, offset)
     if offset + length > len(data):
-        raise ValueError("Insufficient data to parse string of length %d" % length)
+        raise ValueError(f"Insufficient data to parse string of length {length}")
     string_data = data[offset:offset + length]
     return string_data, offset + length
 
 
-def parse_name_list(data: bytes, offset: int) -> tuple:
+def parse_name_list(data: bytes, offset: int) -> Tuple[List[str], int]:
     """Parse a name-list (comma-separated algorithm names). Returns (list, new_offset)."""
     name_list_bytes, offset = parse_string(data, offset)
     if len(name_list_bytes) == 0:
@@ -68,7 +117,7 @@ def parse_name_list(data: bytes, offset: int) -> tuple:
     return names, offset
 
 
-def parse_boolean(data: bytes, offset: int) -> tuple:
+def parse_boolean(data: bytes, offset: int) -> Tuple[bool, int]:
     """Parse a boolean byte. Returns (bool_value, new_offset)."""
     value, offset = parse_byte(data, offset)
     return value != 0, offset
@@ -79,15 +128,15 @@ def parse_ssh_packet(conn: socket.socket) -> bytes:
     Read and parse an SSH binary packet from the connection.
     Returns the payload bytes (without padding).
     """
-    header = conn.recv(5)
-    if len(header) < 5:
+    header = conn.recv(SSH_HEADER_LENGTH)
+    if len(header) < SSH_HEADER_LENGTH:
         raise ValueError("Failed to read SSH packet header")
 
     packet_length = struct.unpack('>I', header[0:4])[0]
     padding_length = header[4]
 
-    if packet_length < 1 or packet_length > 1024 * 1024:
-        raise ValueError("Invalid packet length: %d" % packet_length)
+    if packet_length < 1 or packet_length > MAX_PACKET_LENGTH:
+        raise ValueError(f"Invalid packet length: {packet_length}")
 
     remaining = packet_length - 1
     data = b''
@@ -103,7 +152,7 @@ def parse_ssh_packet(conn: socket.socket) -> bytes:
     return payload
 
 
-def parse_kexinit(payload: bytes) -> dict:
+def parse_kexinit(payload: bytes) -> Dict[str, any]:
     """
     Parse SSH_MSG_KEXINIT message payload.
     Returns a dictionary with all the algorithm lists.
@@ -112,9 +161,9 @@ def parse_kexinit(payload: bytes) -> dict:
 
     msg_type, offset = parse_byte(payload, offset)
     if msg_type != SSH_MSG_KEXINIT:
-        raise ValueError("Expected SSH_MSG_KEXINIT (20), got %d" % msg_type)
+        raise ValueError(f"Expected SSH_MSG_KEXINIT (20), got {msg_type}")
 
-    offset += 16
+    offset += KEXINIT_COOKIE_LENGTH
 
     kex_algorithms, offset = parse_name_list(payload, offset)
     server_host_key_algorithms, offset = parse_name_list(payload, offset)
@@ -146,22 +195,23 @@ def parse_kexinit(payload: bytes) -> dict:
     }
 
 
-def exchange(ip: str, port: int) -> dict:
+def exchange(ip: str, port: int) -> Optional[Dict[str, any]]:
     """
     Connect to SSH server and retrieve KEXINIT data.
     Returns a dictionary with algorithm lists, or None on failure.
     """
     kexinit_data = None
+    conn = None
     try:
         conn = socket.create_connection((ip, port), timeout=5)
-        print("[*] Connected to %s on port %i..." % (ip, port))
+        print(f"[*] Connected to {ip} on port {port}...")
 
-        version_data = conn.recv(255)
+        version_data = conn.recv(VERSION_STRING_MAX_LENGTH)
         if not version_data or b'\n' not in version_data:
             raise ValueError("Failed to receive SSH version string")
 
         version = version_data.decode('ascii', errors='ignore').split('\n')[0].strip()
-        print("    [+] Target SSH version is: %s" % version)
+        print(f"    [+] Target SSH version is: {version}")
 
         conn.send(b'SSH-2.0-OpenSSH_6.0p1\r\n')
         print("    [+] Retrieving algorithm information...")
@@ -169,15 +219,16 @@ def exchange(ip: str, port: int) -> dict:
         payload = parse_ssh_packet(conn)
         kexinit_data = parse_kexinit(payload)
 
-        conn.close()
-
     except Exception as e:
-        print("[-] Error while connecting to %s on port %i: %s" % (ip, port, e))
+        print(f"[-] Error while connecting to {ip} on port {port}: {e}")
+    finally:
+        if conn:
+            conn.close()
 
     return kexinit_data
 
 
-def validate_port(port_str):
+def validate_port(port_str: str) -> Tuple[Optional[int], Optional[str]]:
     """Validate that port is a valid integer in range 1-65535."""
     try:
         port = int(port_str)
@@ -188,12 +239,11 @@ def validate_port(port_str):
         return None, "Port must be a valid integer"
 
 
-def parse_target(target):
+def parse_target(target: str) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     """Parse target string to extract host and port, handling IPv6 addresses."""
     port = 22
     host = target
 
-    # Handle [host]:port format (used for IPv6)
     if target.startswith('['):
         bracket_end = target.find(']')
         if bracket_end == -1:
@@ -201,7 +251,6 @@ def parse_target(target):
 
         host = target[1:bracket_end]
 
-        # Check if port is specified after the bracket
         if bracket_end + 1 < len(target):
             if target[bracket_end + 1] != ':':
                 return None, None, "Invalid format: expected ':' after bracket"
@@ -211,9 +260,7 @@ def parse_target(target):
             port, error = validate_port(port_str)
             if error:
                 return None, None, error
-    # Handle host:port format (IPv4 or hostname)
     elif ':' in target:
-        # Check if this might be an IPv6 address without brackets
         colon_count = target.count(':')
         if colon_count > 1:
             return None, None, "Invalid format: IPv6 addresses must be enclosed in brackets [host]:port"
@@ -227,7 +274,7 @@ def parse_target(target):
     return host, port, None
 
 
-def scan_target(target):
+def scan_target(target: str) -> int:
     """
     Scan target SSH server and display results.
     Returns 0 on success, 1 on failure.
@@ -235,73 +282,55 @@ def scan_target(target):
     host, port, error = parse_target(target)
 
     if error:
-        print("[-] Error: %s" % error)
+        print(f"[-] Error: {error}")
         return 1
 
     if not host or not host.strip():
         print("[-] Error: Hostname cannot be empty")
         return 1
 
-    print("[*] Initiating scan for %s on port %d" % (host, port))
+    print(f"[*] Initiating scan for {host} on port {port}")
     kexinit_data = exchange(host, port)
     if kexinit_data:
         display_result(kexinit_data)
         return 0
-    else:
-        return 1
+
+    return 1
 
 
-def print_algo_list(algo_list: list, title: str):
+def print_algo_list(algo_list: List[str], title: str) -> None:
+    """Print a formatted list of algorithms in two columns."""
     if algo_list:
-        print('    [+] Detected %s: ' % title)
-        # adjust the amount of columns to display
+        print(f'    [+] Detected {title}: ')
+        display_list = algo_list.copy()
         cols = 2
-        while len(algo_list) % cols != 0:
-            algo_list.append('')
-        else:
-            split = [algo_list[i:i + len(algo_list) // cols] for i in
-                     range(0, len(algo_list), len(algo_list) // cols)]
-            for row in zip(*split):
-                print("          " + "".join(str.ljust(c, 37) for c in row))
+        while len(display_list) % cols != 0:
+            display_list.append('')
+
+        split = [display_list[i:i + len(display_list) // cols] for i in
+                 range(0, len(display_list), len(display_list) // cols)]
+        for row in zip(*split):
+            print("          " + "".join(str.ljust(c, 37) for c in row))
     else:
-        print('    [-] No %s detected!' % title)
+        print(f'    [-] No {title} detected!')
 
 
-def detect_weak_algo(detected_list: list, strong_list: list) -> list:
+def detect_weak_algo(detected_list: List[str], strong_list: List[str]) -> List[str]:
     """Identify weak algorithms by comparing detected against strong list."""
-    weak = []
-    for algo in detected_list:
-        if algo not in strong_list:
-            weak.append(algo)
-    return weak
+    return [algo for algo in detected_list if algo not in strong_list]
 
 
-def display_result(kexinit_data: dict):
+def display_result(kexinit_data: Dict[str, any]) -> None:
     """Display KEXINIT algorithm information and identify weak algorithms."""
-
-    strong_ciphers = ['chacha20-poly1305@openssh.com', 'aes256-gcm@openssh.com', 'aes128-gcm@openssh.com',
-                      'aes256-ctr', 'aes192-ctr', 'aes128-ctr']
-
-    strong_macs = ['hmac-sha2-512-etm@openssh.com', 'hmac-sha2-256-etm@openssh.com', 'umac-128',
-                   'umac-128-etm@openssh.com', 'hmac-sha2-512', 'hmac-sha2-256', 'umac-128@openssh.com']
-
-    strong_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha256',
-                  'diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512',
-                  'sntrup761x25519-sha512@openssh.com', 'sntrup761x25519-sha512', 'mlkem768x25519-sha256',
-                  'kex-strict-s-v00@openssh.com', 'ext-info-s']
-
-    strong_hka = ['ssh-rsa-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com', 'ssh-rsa-cert-v00@openssh.com',
-                  'ssh-rsa', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512']
-
     detected_ciphers = kexinit_data['encryption_algorithms_server_to_client']
     detected_kex = kexinit_data['kex_algorithms']
     detected_macs = kexinit_data['mac_algorithms_server_to_client']
     detected_hka = kexinit_data['server_host_key_algorithms']
 
-    weak_ciphers = detect_weak_algo(detected_ciphers, strong_ciphers)
-    weak_kex = detect_weak_algo(detected_kex, strong_kex)
-    weak_macs = detect_weak_algo(detected_macs, strong_macs)
-    weak_hka = detect_weak_algo(detected_hka, strong_hka)
+    weak_ciphers = detect_weak_algo(detected_ciphers, STRONG_CIPHERS)
+    weak_kex = detect_weak_algo(detected_kex, STRONG_KEX)
+    weak_macs = detect_weak_algo(detected_macs, STRONG_MACS)
+    weak_hka = detect_weak_algo(detected_hka, STRONG_HOST_KEY_ALGORITHMS)
 
     print_algo_list(detected_ciphers, 'ciphers')
     print_algo_list(detected_kex, 'KEX algorithms')
@@ -320,10 +349,11 @@ def display_result(kexinit_data: dict):
         print('    [-] Compression is *not* enabled')
 
 
-def main():
+def main() -> None:
+    """Main entry point for the SSH scanner."""
     if len(sys.argv) < 2:
         print("[-] No target specified!")
-        print("Syntax: %s host.example.com[:22]" % sys.argv[0])
+        print(f"Syntax: {sys.argv[0]} host.example.com[:22]")
         sys.exit(1)
 
     exit_code = scan_target(sys.argv[1])
