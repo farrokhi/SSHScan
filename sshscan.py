@@ -113,7 +113,10 @@ def parse_name_list(data: bytes, offset: int) -> Tuple[List[str], int]:
     name_list_bytes, offset = parse_string(data, offset)
     if len(name_list_bytes) == 0:
         return [], offset
-    name_list_str = name_list_bytes.decode('ascii')
+    try:
+        name_list_str = name_list_bytes.decode('ascii')
+    except UnicodeDecodeError as e:
+        raise ValueError(f"Invalid ASCII data in name-list: {e}")
     names = name_list_str.split(',')
     return names, offset
 
