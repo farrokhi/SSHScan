@@ -163,6 +163,8 @@ def parse_kexinit(payload: bytes) -> Dict[str, Any]:
     if msg_type != SSH_MSG_KEXINIT:
         raise ValueError(f"Expected SSH_MSG_KEXINIT (20), got {msg_type}")
 
+    if offset + KEXINIT_COOKIE_LENGTH > len(payload):
+        raise ValueError("Insufficient data for KEXINIT cookie")
     offset += KEXINIT_COOKIE_LENGTH
 
     kex_algorithms, offset = parse_name_list(payload, offset)
