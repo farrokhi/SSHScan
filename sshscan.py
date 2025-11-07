@@ -38,6 +38,8 @@ MAX_PACKET_LENGTH = 1024 * 1024
 SSH_HEADER_LENGTH = 5
 KEXINIT_COOKIE_LENGTH = 16
 VERSION_STRING_MAX_LENGTH = 255
+MIN_PADDING_LENGTH = 4
+MAX_PADDING_LENGTH = 255
 
 # Strong algorithm lists based on security best practices
 STRONG_CIPHERS = [
@@ -142,6 +144,13 @@ def parse_ssh_packet(conn: socket.socket) -> bytes:
     if packet_length < 1 or packet_length > MAX_PACKET_LENGTH:
         raise ValueError(f"Invalid packet length: {packet_length}")
 
+    if padding_length < MIN_PADDING_LENGTH or padding_length > MAX_PADDING_LENGTH:
+        raise ValueError(f"Invalid padding length: {padding_length} (must be {MIN_PADDING_LENGTH}-{MAX_PADDING_LENGTH})")
+
+    payload_length = packet_length - padding_length - 1
+    if payload_length < 0:
+        raise ValueError(f"Invalid packet: padding_length {padding_length} exceeds packet_length {packet_length}")
+
     remaining = packet_length - 1
     data = b''
     while len(data) < remaining:
@@ -150,7 +159,6 @@ def parse_ssh_packet(conn: socket.socket) -> bytes:
             raise ValueError("Connection closed while reading packet")
         data += chunk
 
-    payload_length = packet_length - padding_length - 1
     payload = data[0:payload_length]
 
     return payload
