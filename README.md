@@ -1,6 +1,8 @@
 SSHScan
 =======
 
+[![CI](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml/badge.svg)](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml)
+
 SSHScan is an remote auditing tool that enumerates SSH Ciphers.
 It can also helps identify if any weak ciphers are enabled.
 
