@@ -25,27 +25,156 @@
 # Cipher detection based on: https://stribika.github.io/2015/01/04/secure-secure-shell.html
 #
 
-import re
 import socket
+import struct
 import sys
 
 
-def exchange(ip: str, port: int) -> str:
-    ciphers = ''
+# SSH Protocol Constants
+SSH_MSG_KEXINIT = 20
+
+
+def parse_uint32(data: bytes, offset: int) -> tuple:
+    """Parse a 4-byte big-endian unsigned integer. Returns (value, new_offset)."""
+    if offset + 4 > len(data):
+        raise ValueError("Insufficient data to parse uint32")
+    value = struct.unpack('>I', data[offset:offset + 4])[0]
+    return value, offset + 4
+
+
+def parse_byte(data: bytes, offset: int) -> tuple:
+    """Parse a single byte. Returns (value, new_offset)."""
+    if offset >= len(data):
+        raise ValueError("Insufficient data to parse byte")
+    return data[offset], offset + 1
+
+
+def parse_string(data: bytes, offset: int) -> tuple:
+    """Parse a length-prefixed string. Returns (string_bytes, new_offset)."""
+    length, offset = parse_uint32(data, offset)
+    if offset + length > len(data):
+        raise ValueError("Insufficient data to parse string of length %d" % length)
+    string_data = data[offset:offset + length]
+    return string_data, offset + length
+
+
+def parse_name_list(data: bytes, offset: int) -> tuple:
+    """Parse a name-list (comma-separated algorithm names). Returns (list, new_offset)."""
+    name_list_bytes, offset = parse_string(data, offset)
+    if len(name_list_bytes) == 0:
+        return [], offset
+    name_list_str = name_list_bytes.decode('ascii')
+    names = name_list_str.split(',')
+    return names, offset
+
+
+def parse_boolean(data: bytes, offset: int) -> tuple:
+    """Parse a boolean byte. Returns (bool_value, new_offset)."""
+    value, offset = parse_byte(data, offset)
+    return value != 0, offset
+
+
+def parse_ssh_packet(conn: socket.socket) -> bytes:
+    """
+    Read and parse an SSH binary packet from the connection.
+    Returns the payload bytes (without padding).
+    """
+    header = conn.recv(5)
+    if len(header) < 5:
+        raise ValueError("Failed to read SSH packet header")
+
+    packet_length = struct.unpack('>I', header[0:4])[0]
+    padding_length = header[4]
+
+    if packet_length < 1 or packet_length > 1024 * 1024:
+        raise ValueError("Invalid packet length: %d" % packet_length)
+
+    remaining = packet_length - 1
+    data = b''
+    while len(data) < remaining:
+        chunk = conn.recv(remaining - len(data))
+        if not chunk:
+            raise ValueError("Connection closed while reading packet")
+        data += chunk
+
+    payload_length = packet_length - padding_length - 1
+    payload = data[0:payload_length]
+
+    return payload
+
+
+def parse_kexinit(payload: bytes) -> dict:
+    """
+    Parse SSH_MSG_KEXINIT message payload.
+    Returns a dictionary with all the algorithm lists.
+    """
+    offset = 0
+
+    msg_type, offset = parse_byte(payload, offset)
+    if msg_type != SSH_MSG_KEXINIT:
+        raise ValueError("Expected SSH_MSG_KEXINIT (20), got %d" % msg_type)
+
+    offset += 16
+
+    kex_algorithms, offset = parse_name_list(payload, offset)
+    server_host_key_algorithms, offset = parse_name_list(payload, offset)
+    encryption_algorithms_c2s, offset = parse_name_list(payload, offset)
+    encryption_algorithms_s2c, offset = parse_name_list(payload, offset)
+    mac_algorithms_c2s, offset = parse_name_list(payload, offset)
+    mac_algorithms_s2c, offset = parse_name_list(payload, offset)
+    compression_algorithms_c2s, offset = parse_name_list(payload, offset)
+    compression_algorithms_s2c, offset = parse_name_list(payload, offset)
+    languages_c2s, offset = parse_name_list(payload, offset)
+    languages_s2c, offset = parse_name_list(payload, offset)
+
+    first_kex_packet_follows, offset = parse_boolean(payload, offset)
+    reserved, offset = parse_uint32(payload, offset)
+
+    return {
+        'kex_algorithms': kex_algorithms,
+        'server_host_key_algorithms': server_host_key_algorithms,
+        'encryption_algorithms_client_to_server': encryption_algorithms_c2s,
+        'encryption_algorithms_server_to_client': encryption_algorithms_s2c,
+        'mac_algorithms_client_to_server': mac_algorithms_c2s,
+        'mac_algorithms_server_to_client': mac_algorithms_s2c,
+        'compression_algorithms_client_to_server': compression_algorithms_c2s,
+        'compression_algorithms_server_to_client': compression_algorithms_s2c,
+        'languages_client_to_server': languages_c2s,
+        'languages_server_to_client': languages_s2c,
+        'first_kex_packet_follows': first_kex_packet_follows,
+        'reserved': reserved
+    }
+
+
+def exchange(ip: str, port: int) -> dict:
+    """
+    Connect to SSH server and retrieve KEXINIT data.
+    Returns a dictionary with algorithm lists, or None on failure.
+    """
+    kexinit_data = None
     try:
         conn = socket.create_connection((ip, port), timeout=5)
         print("[*] Connected to %s on port %i..." % (ip, port))
-        version = conn.recv(50).decode().split('\n')[0]
-        conn.send(b'SSH-2.0-OpenSSH_6.0p1\r\n')
+
+        version_data = conn.recv(255)
+        if not version_data or b'\n' not in version_data:
+            raise ValueError("Failed to receive SSH version string")
+
+        version = version_data.decode('ascii', errors='ignore').split('\n')[0].strip()
         print("    [+] Target SSH version is: %s" % version)
-        print("    [+] Retrieving ciphers...")
-        ciphers = conn.recv(984).decode(errors='ignore')
+
+        conn.send(b'SSH-2.0-OpenSSH_6.0p1\r\n')
+        print("    [+] Retrieving algorithm information...")
+
+        payload = parse_ssh_packet(conn)
+        kexinit_data = parse_kexinit(payload)
+
         conn.close()
 
     except Exception as e:
         print("[-] Error while connecting to %s on port %i: %s" % (ip, port, e))
 
-    return ciphers
+    return kexinit_data
 
 
 def validate_port(port_str):
@@ -114,9 +243,9 @@ def scan_target(target):
         return 1
 
     print("[*] Initiating scan for %s on port %d" % (host, port))
-    detected_ciphers = exchange(host, port)
-    if detected_ciphers:
-        display_result(detected_ciphers)
+    kexinit_data = exchange(host, port)
+    if kexinit_data:
+        display_result(kexinit_data)
         return 0
     else:
         return 1
@@ -138,53 +267,41 @@ def print_algo_list(algo_list: list, title: str):
         print('    [-] No %s detected!' % title)
 
 
-def display_result(given_algo: str):
-    all_ciphers = ['3des', '3des-cbc', 'acss@openssh.org', 'aes128-cbc', 'aes128-ctr', 'aes128-gcm@openssh.com',
-                   'aes192-cbc', 'aes192-ctr', 'aes256-cbc', 'aes256-ctr', 'aes256-gcm@openssh.com', 'arcfour',
-                   'arcfour128', 'arcfour256', 'blowfish', 'blowfish-cbc', 'cast128-cbc',
-                   'chacha20-poly1305@openssh.com', 'rijndael-cbc@lysator.liu.se']
+def detect_weak_algo(detected_list: list, strong_list: list) -> list:
+    """Identify weak algorithms by comparing detected against strong list."""
+    weak = []
+    for algo in detected_list:
+        if algo not in strong_list:
+            weak.append(algo)
+    return weak
+
+
+def display_result(kexinit_data: dict):
+    """Display KEXINIT algorithm information and identify weak algorithms."""
+
     strong_ciphers = ['chacha20-poly1305@openssh.com', 'aes256-gcm@openssh.com', 'aes128-gcm@openssh.com',
                       'aes256-ctr', 'aes192-ctr', 'aes128-ctr']
 
-    all_macs = ['hmac-md5', 'hmac-md5-96', 'hmac-md5-96-etm@openssh.com', 'hmac-md5-etm@openssh.com', 'hmac-ripemd160',
-                'hmac-ripemd160-etm@openssh.com', 'hmac-ripemd160@openssh.com', 'hmac-sha1', 'hmac-sha1-96',
-                'hmac-sha1-96-etm@openssh.com', 'hmac-sha1-etm@openssh.com', 'hmac-sha2-256',
-                'hmac-sha2-256-etm@openssh.com', 'hmac-sha2-512', 'hmac-sha2-512-etm@openssh.com',
-                'hmac-sha256-96@ssh.com', 'hmac-sha256@ssh.com', 'umac-128-etm@openssh.com', 'umac-128@openssh.com',
-                'umac-64-etm@openssh.com', 'umac-64@openssh.com']
     strong_macs = ['hmac-sha2-512-etm@openssh.com', 'hmac-sha2-256-etm@openssh.com', 'umac-128',
                    'umac-128-etm@openssh.com', 'hmac-sha2-512', 'hmac-sha2-256', 'umac-128@openssh.com']
 
-    all_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha1',
-               'diffie-hellman-group-exchange-sha256', 'diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1',
-               'diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512',
-               'ecdh-sha2-nistp256', 'ecdh-sha2-nistp384', 'ecdh-sha2-nistp521',
-               'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384-cert-v01@openssh.com',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'sntrup4591761x25519-sha512@tinyssh.org']
     strong_kex = ['curve25519-sha256', 'curve25519-sha256@libssh.org', 'diffie-hellman-group-exchange-sha256',
-                  'diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512']
+                  'diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512', 'diffie-hellman-group18-sha512',
+                  'sntrup761x25519-sha512@openssh.com', 'sntrup761x25519-sha512', 'mlkem768x25519-sha256',
+                  'kex-strict-s-v00@openssh.com', 'ext-info-s']
 
-    all_hka = ['ecdsa-sha2-nistp256', 'ecdsa-sha2-nistp256-cert-v01@openssh.com', 'ecdsa-sha2-nistp384',
-               'ecdsa-sha2-nistp384-cert-v01@openssh.com', 'ecdsa-sha2-nistp521',
-               'ecdsa-sha2-nistp521-cert-v01@openssh.com', 'rsa-sha2-256', 'rsa-sha2-256-cert-v01@openssh.com',
-               'rsa-sha2-512', 'rsa-sha2-512-cert-v01@openssh.com', 'sk-ecdsa-sha2-nistp256-cert-v01@openssh.com',
-               'sk-ecdsa-sha2-nistp256@openssh.com', 'sk-ssh-ed25519-cert-v01@openssh.com',
-               'sk-ssh-ed25519@openssh.com', 'ssh-dss', 'ssh-dss-cert-v00@openssh.com', 'ssh-dss-cert-v01@openssh.com',
-               'ssh-dss-sha224@ssh.com', 'ssh-dss-sha256@ssh.com', 'ssh-dss-sha384@ssh.com', 'ssh-dss-sha512@ssh.com',
-               'ssh-ed25519', 'ssh-ed25519-cert-v01@openssh.com', 'ssh-rsa', 'ssh-rsa-cert-v00@openssh.com',
-               'ssh-rsa-cert-v01@openssh.com', 'ssh-rsa-sha224@ssh.com', 'ssh-rsa-sha256@ssh.com',
-               'ssh-rsa-sha384@ssh.com', 'ssh-rsa-sha512@ssh.com', 'ssh-xmss-cert-v01@openssh.com',
-               'ssh-xmss@openssh.com', 'x509v3-sign-dss', 'x509v3-sign-dss-sha224@ssh.com',
-               'x509v3-sign-dss-sha256@ssh.com', 'x509v3-sign-dss-sha384@ssh.com', 'x509v3-sign-dss-sha512@ssh.com',
-               'x509v3-sign-rsa', 'x509v3-sign-rsa-sha224@ssh.com', 'x509v3-sign-rsa-sha256@ssh.com',
-               'x509v3-sign-rsa-sha384@ssh.com', 'x509v3-sign-rsa-sha512@ssh.com']
     strong_hka = ['ssh-rsa-cert-v01@openssh.com', 'ssh-ed25519-cert-v01@openssh.com', 'ssh-rsa-cert-v00@openssh.com',
                   'ssh-rsa', 'ssh-ed25519', 'rsa-sha2-256', 'rsa-sha2-512']
 
-    detected_macs, weak_macs = detect_algo(given_algo, all_macs, strong_macs)
-    detected_ciphers, weak_ciphers = detect_algo(given_algo, all_ciphers, strong_ciphers)
-    detected_kex, weak_kex = detect_algo(given_algo, all_kex, strong_kex)
-    detected_hka, weak_hka = detect_algo(given_algo, all_hka, strong_hka)
+    detected_ciphers = kexinit_data['encryption_algorithms_server_to_client']
+    detected_kex = kexinit_data['kex_algorithms']
+    detected_macs = kexinit_data['mac_algorithms_server_to_client']
+    detected_hka = kexinit_data['server_host_key_algorithms']
+
+    weak_ciphers = detect_weak_algo(detected_ciphers, strong_ciphers)
+    weak_kex = detect_weak_algo(detected_kex, strong_kex)
+    weak_macs = detect_weak_algo(detected_macs, strong_macs)
+    weak_hka = detect_weak_algo(detected_hka, strong_hka)
 
     print_algo_list(detected_ciphers, 'ciphers')
     print_algo_list(detected_kex, 'KEX algorithms')
@@ -196,22 +313,11 @@ def display_result(given_algo: str):
     print_algo_list(weak_macs, 'weak MACs')
     print_algo_list(weak_hka, 'weak HostKey algorithms')
 
-    if re.search('zlib@openssh.com', given_algo):
+    compression_algos = kexinit_data['compression_algorithms_server_to_client']
+    if 'zlib@openssh.com' in compression_algos or 'zlib' in compression_algos:
         print('    [+] Compression is enabled')
     else:
         print('    [-] Compression is *not* enabled')
-
-
-def detect_algo(given_algo, all_algo, strong_algo):
-    _detected = []
-    _weak = []
-    for i in all_algo:
-        m = re.search(i, given_algo)
-        if m:
-            _detected.append(i)
-            if i not in strong_algo:
-                _weak.append(i)
-    return _detected, _weak
 
 
 def main():
