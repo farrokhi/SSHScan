@@ -99,20 +99,27 @@ def parse_target(target):
 
 
 def scan_target(target):
+    """
+    Scan target SSH server and display results.
+    Returns 0 on success, 1 on failure.
+    """
     host, port, error = parse_target(target)
 
     if error:
         print("[-] Error: %s" % error)
-        sys.exit(1)
+        return 1
 
     if not host or not host.strip():
         print("[-] Error: Hostname cannot be empty")
-        sys.exit(1)
+        return 1
 
     print("[*] Initiating scan for %s on port %d" % (host, port))
     detected_ciphers = exchange(host, port)
     if detected_ciphers:
         display_result(detected_ciphers)
+        return 0
+    else:
+        return 1
 
 
 def print_algo_list(algo_list: list, title: str):
@@ -213,7 +220,8 @@ def main():
         print("Syntax: %s host.example.com[:22]" % sys.argv[0])
         sys.exit(1)
 
-    scan_target(sys.argv[1])
+    exit_code = scan_target(sys.argv[1])
+    sys.exit(exit_code)
 
 
 if __name__ == '__main__':
