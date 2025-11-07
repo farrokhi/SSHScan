@@ -48,15 +48,38 @@ def exchange(ip: str, port: int) -> str:
     return ciphers
 
 
+def validate_port(port_str):
+    """Validate that port is a valid integer in range 1-65535."""
+    try:
+        port = int(port_str)
+        if port < 1 or port > 65535:
+            return None, "Port must be between 1 and 65535"
+        return port, None
+    except ValueError:
+        return None, "Port must be a valid integer"
+
+
 def scan_target(target):
     if ':' in target:
-        host, port = target.split(':')
+        parts = target.split(':')
+        if len(parts) != 2:
+            print("[-] Error: Invalid target format. Use host[:port]")
+            sys.exit(1)
+        host, port_str = parts
+        port, error = validate_port(port_str)
+        if error:
+            print("[-] Error: %s" % error)
+            sys.exit(1)
     else:
         host = target
         port = 22
 
-    print("[*] Initiating scan for %s on port %d" % (host, int(port)))
-    detected_ciphers = exchange(host, int(port))
+    if not host or not host.strip():
+        print("[-] Error: Hostname cannot be empty")
+        sys.exit(1)
+
+    print("[*] Initiating scan for %s on port %d" % (host, port))
+    detected_ciphers = exchange(host, port)
     if detected_ciphers:
         display_result(detected_ciphers)
 
