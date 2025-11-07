@@ -59,20 +59,51 @@ def validate_port(port_str):
         return None, "Port must be a valid integer"
 
 
-def scan_target(target):
-    if ':' in target:
+def parse_target(target):
+    """Parse target string to extract host and port, handling IPv6 addresses."""
+    port = 22
+    host = target
+
+    # Handle [host]:port format (used for IPv6)
+    if target.startswith('['):
+        bracket_end = target.find(']')
+        if bracket_end == -1:
+            return None, None, "Invalid format: missing closing bracket"
+
+        host = target[1:bracket_end]
+
+        # Check if port is specified after the bracket
+        if bracket_end + 1 < len(target):
+            if target[bracket_end + 1] != ':':
+                return None, None, "Invalid format: expected ':' after bracket"
+            port_str = target[bracket_end + 2:]
+            if not port_str:
+                return None, None, "Invalid format: missing port after ':'"
+            port, error = validate_port(port_str)
+            if error:
+                return None, None, error
+    # Handle host:port format (IPv4 or hostname)
+    elif ':' in target:
+        # Check if this might be an IPv6 address without brackets
+        colon_count = target.count(':')
+        if colon_count > 1:
+            return None, None, "Invalid format: IPv6 addresses must be enclosed in brackets [host]:port"
+
         parts = target.split(':')
-        if len(parts) != 2:
-            print("[-] Error: Invalid target format. Use host[:port]")
-            sys.exit(1)
-        host, port_str = parts
-        port, error = validate_port(port_str)
+        host = parts[0]
+        port, error = validate_port(parts[1])
         if error:
-            print("[-] Error: %s" % error)
-            sys.exit(1)
-    else:
-        host = target
-        port = 22
+            return None, None, error
+
+    return host, port, None
+
+
+def scan_target(target):
+    host, port, error = parse_target(target)
+
+    if error:
+        print("[-] Error: %s" % error)
+        sys.exit(1)
 
     if not host or not host.strip():
         print("[-] Error: Hostname cannot be empty")
