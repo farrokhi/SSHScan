@@ -6,10 +6,66 @@
 # Algorithm classifications based on algorithm_guidance.json
 
 import argparse
+import os
 import socket
 import struct
 import sys
 from typing import Any, Optional, Tuple, List, Dict
+
+
+# Terminal Colors
+class TerminalColors:
+    """ANSI color codes for terminal output."""
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    RESET = '\033[0m'
+
+
+def supports_color() -> bool:
+    """
+    Detect if the terminal supports color output.
+
+    Checks for:
+    - NO_COLOR environment variable (https://no-color.org/)
+    - FORCE_COLOR environment variable
+    - Output is to a TTY (not redirected)
+    - TERM environment variable is set and not 'dumb'
+    """
+    if os.environ.get('NO_COLOR'):
+        return False
+
+    if os.environ.get('FORCE_COLOR'):
+        return True
+
+    if not hasattr(sys.stdout, 'isatty') or not sys.stdout.isatty():
+        return False
+
+    term = os.environ.get('TERM', '')
+    if term == 'dumb':
+        return False
+
+    return True
+
+
+# Global flag to control color output
+USE_COLOR = supports_color()
+
+
+def colorize(text: str, color: str) -> str:
+    """Apply color to text if colors are enabled."""
+    if USE_COLOR:
+        return f"{color}{text}{TerminalColors.RESET}"
+    return text
+
+
+def red(text: str) -> str:
+    """Return text in red (for weak/insecure algorithms)."""
+    return colorize(text, TerminalColors.RED)
+
+
+def green(text: str) -> str:
+    """Return text in green (for strong/secure algorithms)."""
+    return colorize(text, TerminalColors.GREEN)
 
 
 # SSH Protocol Constants
@@ -295,8 +351,8 @@ def scan_target(target: str) -> int:
     return 1
 
 
-def print_algo_list(algo_list: List[str], title: str) -> None:
-    """Print a formatted list of algorithms in two columns."""
+def print_algo_list(algo_list: List[str], title: str, strong_list: Optional[List[str]] = None) -> None:
+    """Print a formatted list of algorithms in two columns with optional color coding."""
     if algo_list:
         print(f'    [+] Detected {title}: ')
         display_list = algo_list.copy()
@@ -306,8 +362,22 @@ def print_algo_list(algo_list: List[str], title: str) -> None:
 
         split = [display_list[i:i + len(display_list) // cols] for i in
                  range(0, len(display_list), len(display_list) // cols)]
+
         for row in zip(*split):
-            print("          " + "".join(str.ljust(c, 37) for c in row))
+            formatted_row = []
+            for algo in row:
+                if algo:
+                    if strong_list is not None:
+                        if algo in strong_list:
+                            colored = green(algo)
+                        else:
+                            colored = red(algo)
+                        formatted_row.append(str.ljust(colored, 37 + len(colored) - len(algo)))
+                    else:
+                        formatted_row.append(str.ljust(algo, 37))
+                else:
+                    formatted_row.append(' ' * 37)
+            print("          " + "".join(formatted_row))
     else:
         print(f'    [-] No {title} detected!')
 
@@ -329,10 +399,10 @@ def display_result(kexinit_data: Dict[str, Any]) -> None:
     weak_macs = detect_weak_algo(detected_macs, STRONG_MACS)
     weak_hka = detect_weak_algo(detected_hka, STRONG_HOST_KEY_ALGORITHMS)
 
-    print_algo_list(detected_ciphers, 'ciphers')
-    print_algo_list(detected_kex, 'KEX algorithms')
-    print_algo_list(detected_macs, 'MACs')
-    print_algo_list(detected_hka, 'HostKey algorithms')
+    print_algo_list(detected_ciphers, 'ciphers', STRONG_CIPHERS)
+    print_algo_list(detected_kex, 'KEX algorithms', STRONG_KEX)
+    print_algo_list(detected_macs, 'MACs', STRONG_MACS)
+    print_algo_list(detected_hka, 'HostKey algorithms', STRONG_HOST_KEY_ALGORITHMS)
 
     print_algo_list(weak_ciphers, 'weak ciphers')
     print_algo_list(weak_kex, 'weak KEX algorithms')
@@ -348,6 +418,8 @@ def display_result(kexinit_data: Dict[str, Any]) -> None:
 
 def main() -> None:
     """Main entry point for the SSH scanner."""
+    global USE_COLOR
+
     parser = argparse.ArgumentParser(
         description='SSH server cipher and algorithm scanner',
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -368,8 +440,25 @@ Examples:
         action='version',
         version='%(prog)s 2.0'
     )
+    parser.add_argument(
+        '--no-color',
+        action='store_true',
+        help='disable colored output'
+    )
+    parser.add_argument(
+        '--color',
+        action='store_true',
+        help='force colored output even when not in a TTY'
+    )
 
     args = parser.parse_args()
+
+    # Handle color flags
+    if args.no_color:
+        USE_COLOR = False
+    elif args.color:
+        USE_COLOR = True
+
     exit_code = scan_target(args.target)
     sys.exit(exit_code)
 
