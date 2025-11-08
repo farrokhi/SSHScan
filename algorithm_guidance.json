@@ -1,0 +1,395 @@
+{
+  "categories": [
+    {
+      "name": "Ciphers",
+      "entries": [
+        {
+          "algorithms": ["chacha20-poly1305@openssh.com"],
+          "classification": "secure",
+          "rationale": "AEAD construction from ChaCha20 stream cipher and Poly1305 authenticator with proofs of security and an OpenSSH instantiation.",
+          "references": [
+            {"title": "Bernstein 2008", "url": "https://cr.yp.to/chacha/chacha-20080128.pdf"},
+            {"title": "RFC 8439", "url": "https://www.rfc-editor.org/rfc/rfc8439"},
+            {"title": "OpenSSH PROTOCOL.chacha20poly1305", "url": "https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.chacha20poly1305"}
+          ]
+        },
+        {
+          "algorithms": ["aes256-gcm@openssh.com"],
+          "classification": "secure",
+          "rationale": "AES-GCM provides provable IND-CCA security with minimal overhead and is recommended by the mode's designers.",
+          "references": [
+            {"title": "McGrew & Viega 2004", "url": "https://csrc.nist.gov/csrc/media/projects/block-cipher-techniques/documents/bcm02/McGrewViega.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["aes128-gcm@openssh.com"],
+          "classification": "secure",
+          "rationale": "Same AEAD construction and proofs apply to 128-bit keys.",
+          "references": [
+            {"title": "McGrew & Viega 2004", "url": "https://csrc.nist.gov/csrc/media/projects/block-cipher-techniques/documents/bcm02/McGrewViega.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["aes256-ctr"],
+          "classification": "secure",
+          "rationale": "Counter mode keeps AES in a provably secure stream configuration when paired with a strong MAC, and RFC 4344 standardizes it for SSH.",
+          "references": [
+            {"title": "RFC 4344", "url": "https://www.rfc-editor.org/rfc/rfc4344"}
+          ]
+        },
+        {
+          "algorithms": ["aes192-ctr"],
+          "classification": "secure",
+          "rationale": "Same security argument as the 256-bit variant.",
+          "references": [
+            {"title": "RFC 4344", "url": "https://www.rfc-editor.org/rfc/rfc4344"}
+          ]
+        },
+        {
+          "algorithms": ["aes128-ctr"],
+          "classification": "secure",
+          "rationale": "Same security argument as the 256-bit variant.",
+          "references": [
+            {"title": "RFC 4344", "url": "https://www.rfc-editor.org/rfc/rfc4344"}
+          ]
+        },
+        {
+          "algorithms": ["3des-cbc"],
+          "classification": "insecure",
+          "rationale": "64-bit block cipher vulnerable to the Sweet32 birthday attack against long-lived SSH sessions.",
+          "references": [
+            {"title": "Bhargavan & Leurent 2016", "url": "https://sweet32.info/SWEET32_CCS16.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["blowfish-cbc"],
+          "classification": "insecure",
+          "rationale": "64-bit block cipher subject to the same Sweet32 collision limits.",
+          "references": [
+            {"title": "Bhargavan & Leurent 2016", "url": "https://sweet32.info/SWEET32_CCS16.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["cast128-cbc"],
+          "classification": "insecure",
+          "rationale": "64-bit block cipher subject to the same Sweet32 collision limits.",
+          "references": [
+            {"title": "Bhargavan & Leurent 2016", "url": "https://sweet32.info/SWEET32_CCS16.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["arcfour", "arcfour128", "arcfour256"],
+          "classification": "insecure",
+          "rationale": "RC4 stream cipher exhibits serious bias attacks that recover keystream bytes in practice.",
+          "references": [
+            {"title": "AlFardan et al. 2013", "url": "https://www.usenix.org/system/files/conference/usenixsecurity13/sec13-paper-alfardan.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["aes256-cbc", "aes192-cbc", "aes128-cbc"],
+          "classification": "insecure",
+          "rationale": "CBC mode without Encrypt-then-MAC suffers from practical padding-oracle attacks such as Lucky13.",
+          "references": [
+            {"title": "AlFardan & Paterson 2013", "url": "https://www.ieee-security.org/TC/SP2013/papers/4977a526.pdf"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Message Authentication Codes",
+      "entries": [
+        {
+          "algorithms": ["hmac-sha2-512-etm@openssh.com"],
+          "classification": "secure",
+          "rationale": "HMAC inherits SHA-512's collision resistance and Encrypt-then-MAC prevents padding oracles.",
+          "references": [
+            {"title": "Bellare, Canetti & Krawczyk 1996", "url": "https://cseweb.ucsd.edu/~mihir/papers/hmac.pdf"},
+            {"title": "Krawczyk 2001", "url": "https://iacr.org/archive/crypto2001/21390229.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["hmac-sha2-256-etm@openssh.com"],
+          "classification": "secure",
+          "rationale": "Same guarantees as the 512-bit variant.",
+          "references": [
+            {"title": "Bellare, Canetti & Krawczyk 1996", "url": "https://cseweb.ucsd.edu/~mihir/papers/hmac.pdf"},
+            {"title": "Krawczyk 2001", "url": "https://iacr.org/archive/crypto2001/21390229.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["hmac-sha2-512"],
+          "classification": "secure",
+          "rationale": "HMAC proof gives strong unforgeability so long as SHA-512 remains preimage-resistant.",
+          "references": [
+            {"title": "Bellare, Canetti & Krawczyk 1996", "url": "https://cseweb.ucsd.edu/~mihir/papers/hmac.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["hmac-sha2-256"],
+          "classification": "secure",
+          "rationale": "Same proof applies to the 256-bit digest.",
+          "references": [
+            {"title": "Bellare, Canetti & Krawczyk 1996", "url": "https://cseweb.ucsd.edu/~mihir/papers/hmac.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["umac-128-etm@openssh.com"],
+          "classification": "secure",
+          "rationale": "UMAC's ε-almost-universal hash guarantees 128-bit tag security and EtM hardens SSH framing.",
+          "references": [
+            {"title": "Black et al. 1999", "url": "https://link.springer.com/chapter/10.1007/3-540-48405-1_24"},
+            {"title": "Krawczyk 2001", "url": "https://iacr.org/archive/crypto2001/21390229.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["umac-128@openssh.com"],
+          "classification": "secure",
+          "rationale": "Same ε-almost-universal hash analysis applies when SSH performs integrity then encryption.",
+          "references": [
+            {"title": "Black et al. 1999", "url": "https://link.springer.com/chapter/10.1007/3-540-48405-1_24"}
+          ]
+        },
+        {
+          "algorithms": ["umac-128"],
+          "classification": "secure",
+          "rationale": "Same as above for the generic algorithm name.",
+          "references": [
+            {"title": "Black et al. 1999", "url": "https://link.springer.com/chapter/10.1007/3-540-48405-1_24"}
+          ]
+        },
+        {
+          "algorithms": ["hmac-sha1", "hmac-sha1-96"],
+          "classification": "insecure",
+          "rationale": "While HMAC-SHA1 remains theoretically secure against collision attacks, it is deprecated due to reduced cryptographic margins and industry best practices recommend migration to SHA-2 based MACs.",
+          "references": [
+            {"title": "Stevens et al. 2017", "url": "https://shattered.io/static/shattered.pdf"},
+            {"title": "Bellare et al. 2006", "url": "https://eprint.iacr.org/2006/043.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["hmac-md5", "hmac-md5-96"],
+          "classification": "insecure",
+          "rationale": "MD5 collision attacks invalidate HMAC-MD5's binding.",
+          "references": [
+            {"title": "Wang & Yu 2005", "url": "https://link.springer.com/chapter/10.1007/11426639_1"}
+          ]
+        },
+        {
+          "algorithms": ["umac-64"],
+          "classification": "insecure",
+          "rationale": "64-bit tags only give 32-bit birthday security, which UMAC's own analysis warns is insufficient for modern SSH volumes.",
+          "references": [
+            {"title": "Black et al. 1999", "url": "https://link.springer.com/chapter/10.1007/3-540-48405-1_24"}
+          ]
+        },
+        {
+          "algorithms": ["none"],
+          "classification": "insecure",
+          "rationale": "Disables integrity entirely and violates SSH's mandatory MAC requirement.",
+          "references": [
+            {"title": "RFC 4253", "url": "https://www.rfc-editor.org/rfc/rfc4253"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Key Exchange Algorithms",
+      "entries": [
+        {
+          "algorithms": ["curve25519-sha256"],
+          "classification": "secure",
+          "rationale": "Twist-secure Montgomery curve with security slightly under 128 bits and well-analyzed implementations.",
+          "references": [
+            {"title": "Bernstein 2006", "url": "https://cr.yp.to/ecdh/curve25519-20060209.pdf"},
+            {"title": "RFC 7748", "url": "https://www.rfc-editor.org/rfc/rfc7748"}
+          ]
+        },
+        {
+          "algorithms": ["curve25519-sha256@libssh.org"],
+          "classification": "secure",
+          "rationale": "Same properties as above, differing only in identification string.",
+          "references": [
+            {"title": "Bernstein 2006", "url": "https://cr.yp.to/ecdh/curve25519-20060209.pdf"},
+            {"title": "RFC 7748", "url": "https://www.rfc-editor.org/rfc/rfc7748"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group14-sha256"],
+          "classification": "secure",
+          "rationale": "2048-bit MODP group delivers ~112-bit strength and avoids SHA-1 collisions.",
+          "references": [
+            {"title": "Lenstra & Verheul 2001", "url": "https://link.springer.com/article/10.1007/s00145-001-0009-4"},
+            {"title": "Adrian et al. 2015", "url": "https://weakdh.org/imperfect-forward-secrecy-ccs15.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group16-sha512"],
+          "classification": "secure",
+          "rationale": "4096-bit MODP group maps to ~152-bit strength.",
+          "references": [
+            {"title": "Lenstra & Verheul 2001", "url": "https://link.springer.com/article/10.1007/s00145-001-0009-4"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group18-sha512"],
+          "classification": "secure",
+          "rationale": "8192-bit MODP group exceeds 192-bit strength targets.",
+          "references": [
+            {"title": "Lenstra & Verheul 2001", "url": "https://link.springer.com/article/10.1007/s00145-001-0009-4"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group-exchange-sha256"],
+          "classification": "secure",
+          "rationale": "Ephemeral MODP parameters sized per policy mitigate precomputation per Logjam guidance.",
+          "references": [
+            {"title": "Adrian et al. 2015", "url": "https://weakdh.org/imperfect-forward-secrecy-ccs15.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["sntrup761x25519-sha512@openssh.com"],
+          "classification": "secure",
+          "rationale": "Combines NTRU Prime (post-quantum) with Curve25519 (classical) for hybrid security.",
+          "references": [
+            {"title": "Bernstein et al. 2017", "url": "https://ntruprime.cr.yp.to/ntruprime-20170628.pdf"},
+            {"title": "OpenSSH sshd_config", "url": "https://github.com/openssh/openssh-portable/blob/master/sshd_config.5"}
+          ]
+        },
+        {
+          "algorithms": ["sntrup761x25519-sha512"],
+          "classification": "secure",
+          "rationale": "Same construction as above without the OpenSSH suffix.",
+          "references": [
+            {"title": "Bernstein et al. 2017", "url": "https://ntruprime.cr.yp.to/ntruprime-20170628.pdf"},
+            {"title": "OpenSSH sshd_config", "url": "https://github.com/openssh/openssh-portable/blob/master/sshd_config.5"}
+          ]
+        },
+        {
+          "algorithms": ["mlkem768x25519-sha256"],
+          "classification": "secure",
+          "rationale": "Hybrid Kyber (ML-KEM-768) plus Curve25519 exchange vetted by the Kyber team.",
+          "references": [
+            {"title": "Bos et al. 2017", "url": "https://eprint.iacr.org/2017/634.pdf"},
+            {"title": "OpenSSH sshd_config", "url": "https://github.com/openssh/openssh-portable/blob/master/sshd_config.5"}
+          ]
+        },
+        {
+          "algorithms": ["kex-strict-s-v00@openssh.com"],
+          "classification": "secure",
+          "rationale": "OpenSSH strict key exchange extension mitigates CVE-2023-48795 (Terrapin attack) by enforcing strict message sequencing and resetting sequence numbers after key exchange.",
+          "references": [
+            {"title": "OpenSSH sshd_config", "url": "https://github.com/openssh/openssh-portable/blob/master/sshd_config.5"},
+            {"title": "Terrapin Attack", "url": "https://terrapin-attack.com"}
+          ]
+        },
+        {
+          "algorithms": ["ext-info-s"],
+          "classification": "secure",
+          "rationale": "RFC 8308 extension provides capability discovery after key exchange, enabling negotiation of additional features. Used with kex-strict for enhanced security.",
+          "references": [
+            {"title": "RFC 8308", "url": "https://www.rfc-editor.org/rfc/rfc8308"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group1-sha1"],
+          "classification": "insecure",
+          "rationale": "1024-bit MODP group falls to the Logjam precomputation attack.",
+          "references": [
+            {"title": "Adrian et al. 2015", "url": "https://weakdh.org/imperfect-forward-secrecy-ccs15.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group14-sha1"],
+          "classification": "insecure",
+          "rationale": "Although the modulus is large enough, the SHA-1 hash in the transcript is collision-prone.",
+          "references": [
+            {"title": "Stevens et al. 2017", "url": "https://shattered.io/static/shattered.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["diffie-hellman-group-exchange-sha1"],
+          "classification": "insecure",
+          "rationale": "Same SHA-1 transcript risk as above plus potential parameter downgrades.",
+          "references": [
+            {"title": "Stevens et al. 2017", "url": "https://shattered.io/static/shattered.pdf"}
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Host-Key Algorithms",
+      "entries": [
+        {
+          "algorithms": ["ssh-ed25519"],
+          "classification": "secure",
+          "rationale": "Ed25519 provides deterministic, side-channel resistant signatures at the 128-bit security level.",
+          "references": [
+            {"title": "Bernstein et al. 2012", "url": "https://cr.yp.to/papers/ed25519-20110926.pdf"},
+            {"title": "RFC 8709", "url": "https://www.rfc-editor.org/rfc/rfc8709"}
+          ]
+        },
+        {
+          "algorithms": ["ssh-ed25519-cert-v01@openssh.com"],
+          "classification": "secure",
+          "rationale": "Same Ed25519 guarantees with OpenSSH certificate framing.",
+          "references": [
+            {"title": "Bernstein et al. 2012", "url": "https://cr.yp.to/papers/ed25519-20110926.pdf"},
+            {"title": "RFC 8709", "url": "https://www.rfc-editor.org/rfc/rfc8709"}
+          ]
+        },
+        {
+          "algorithms": ["rsa-sha2-256"],
+          "classification": "secure",
+          "rationale": "RSA signatures hardened with SHA-256 resist the SHA-1 collision class of attacks.",
+          "references": [
+            {"title": "Boneh & Shoup 2020", "url": "https://toc.cryptobook.us/book.pdf"},
+            {"title": "RFC 8332", "url": "https://www.rfc-editor.org/rfc/rfc8332"}
+          ]
+        },
+        {
+          "algorithms": ["rsa-sha2-512"],
+          "classification": "secure",
+          "rationale": "Same as above with a larger digest.",
+          "references": [
+            {"title": "Boneh & Shoup 2020", "url": "https://toc.cryptobook.us/book.pdf"},
+            {"title": "RFC 8332", "url": "https://www.rfc-editor.org/rfc/rfc8332"}
+          ]
+        },
+        {
+          "algorithms": ["ssh-rsa-cert-v01@openssh.com"],
+          "classification": "secure",
+          "rationale": "Certificates inherit the stronger SHA-2 RSA signatures when configured accordingly.",
+          "notes": "Use with rsa-sha2-256/512",
+          "references": [
+            {"title": "Boneh & Shoup 2020", "url": "https://toc.cryptobook.us/book.pdf"},
+            {"title": "RFC 8332", "url": "https://www.rfc-editor.org/rfc/rfc8332"}
+          ]
+        },
+        {
+          "algorithms": ["ssh-rsa"],
+          "classification": "insecure",
+          "rationale": "Uses SHA-1 signatures, which are forgeable via chosen-prefix collisions.",
+          "references": [
+            {"title": "Stevens et al. 2017", "url": "https://shattered.io/static/shattered.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["ssh-rsa-cert-v00@openssh.com"],
+          "classification": "insecure",
+          "rationale": "Certificate flavor that still relies on SHA-1 signatures.",
+          "references": [
+            {"title": "Stevens et al. 2017", "url": "https://shattered.io/static/shattered.pdf"}
+          ]
+        },
+        {
+          "algorithms": ["ssh-dss"],
+          "classification": "insecure",
+          "rationale": "DSA keys are permanently limited to 1024 bits and were disabled by OpenSSH for insufficient security margin.",
+          "references": [
+            {"title": "OpenSSH 7.0 Release Notes", "url": "https://www.openssh.org/txt/release-7.0"}
+          ]
+        }
+      ]
+    }
+  ]
+}

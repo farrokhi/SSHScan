@@ -3,7 +3,7 @@
 # Copyright (c) 2017 Vincent Ruijter
 # Copyright (c) 2020-2025 Babak Farrokhi
 #
-# Cipher detection based on: https://stribika.github.io/2015/01/04/secure-secure-shell.html
+# Algorithm classifications based on algorithm_guidance.json
 
 import argparse
 import socket
@@ -21,7 +21,8 @@ VERSION_STRING_MAX_LENGTH = 255
 MIN_PADDING_LENGTH = 4
 MAX_PADDING_LENGTH = 255
 
-# Strong algorithm lists based on security best practices
+# Strong algorithm lists based on algorithm_guidance.json (canonical source)
+# See algorithm_guidance.json for detailed rationale and references
 STRONG_CIPHERS = [
     'chacha20-poly1305@openssh.com',
     'aes256-gcm@openssh.com',
@@ -56,13 +57,11 @@ STRONG_KEX = [
 ]
 
 STRONG_HOST_KEY_ALGORITHMS = [
-    'ssh-rsa-cert-v01@openssh.com',
-    'ssh-ed25519-cert-v01@openssh.com',
-    'ssh-rsa-cert-v00@openssh.com',
-    'ssh-rsa',
     'ssh-ed25519',
+    'ssh-ed25519-cert-v01@openssh.com',
     'rsa-sha2-256',
-    'rsa-sha2-512'
+    'rsa-sha2-512',
+    'ssh-rsa-cert-v01@openssh.com'
 ]
 
 
