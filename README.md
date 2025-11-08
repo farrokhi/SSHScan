@@ -3,7 +3,7 @@ SSHScan
 
 [![CI](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml/badge.svg)](https://github.com/farrokhi/SSHScan/actions/workflows/ci.yml)
 
-SSHScan is a remote auditing tool that enumerates SSH server cryptographic algorithms. It helps identify weak or deprecated ciphers, key exchange algorithms, MACs, and host key algorithms.
+SSHScan is a remote auditing tool that enumerates SSH server cryptographic algorithms. It helps identify insecure and not recommended ciphers, key exchange algorithms, MACs, and host key algorithms.
 
 Requirements
 ============
@@ -69,14 +69,14 @@ Sample output:
     [+] Detected HostKey algorithms:
           rsa-sha2-512                         ssh-ed25519
           rsa-sha2-256
-    [-] No weak ciphers detected!
-    [+] Detected weak KEX algorithms:
+    [-] No not recommended ciphers detected!
+    [+] Detected not recommended KEX algorithms:
           ecdh-sha2-nistp256                   ecdh-sha2-nistp521
           ecdh-sha2-nistp384
-    [+] Detected weak MACs:
+    [+] Detected not recommended MACs:
           umac-64-etm@openssh.com              umac-64@openssh.com
           hmac-sha1-etm@openssh.com            hmac-sha1
-    [-] No weak HostKey algorithms detected!
+    [-] No not recommended HostKey algorithms detected!
     [+] Compression is enabled
 ```
 

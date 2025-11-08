@@ -2,6 +2,8 @@
 
 This document summarizes which SSH algorithms are considered secure or insecure for use in sshscan.py. Each classification is supported by peer-reviewed research papers, IETF RFCs, and OpenSSH protocol documentation from the cryptographers who designed these algorithms. NIST sources were intentionally excluded from this analysis.
 
+Note that algorithms classified as insecure include both cryptographically broken primitives (such as RC4, SHA-1 signatures, and 64-bit block ciphers vulnerable to Sweet32) and algorithms not recommended for other reasons including trust concerns about standardization processes (such as NIST P-curves) or insufficient security margins (such as UMAC-64). Algorithms not listed as secure are flagged as "not recommended" in sshscan output.
+
 ## Ciphers
 
 ### Secure

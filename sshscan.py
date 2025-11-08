@@ -59,7 +59,7 @@ def colorize(text: str, color: str) -> str:
 
 
 def red(text: str) -> str:
-    """Return text in red (for weak/insecure algorithms)."""
+    """Return text in red (for not recommended or insecure algorithms)."""
     return colorize(text, TerminalColors.RED)
 
 
@@ -382,32 +382,32 @@ def print_algo_list(algo_list: List[str], title: str, strong_list: Optional[List
         print(f'    [-] No {title} detected!')
 
 
-def detect_weak_algo(detected_list: List[str], strong_list: List[str]) -> List[str]:
-    """Identify weak algorithms by comparing detected against strong list."""
+def detect_not_recommended_algo(detected_list: List[str], strong_list: List[str]) -> List[str]:
+    """Identify algorithms not recommended by comparing detected against strong list."""
     return [algo for algo in detected_list if algo not in strong_list]
 
 
 def display_result(kexinit_data: Dict[str, Any]) -> None:
-    """Display KEXINIT algorithm information and identify weak algorithms."""
+    """Display KEXINIT algorithm information and identify not recommended algorithms."""
     detected_ciphers = kexinit_data['encryption_algorithms_server_to_client']
     detected_kex = kexinit_data['kex_algorithms']
     detected_macs = kexinit_data['mac_algorithms_server_to_client']
     detected_hka = kexinit_data['server_host_key_algorithms']
 
-    weak_ciphers = detect_weak_algo(detected_ciphers, STRONG_CIPHERS)
-    weak_kex = detect_weak_algo(detected_kex, STRONG_KEX)
-    weak_macs = detect_weak_algo(detected_macs, STRONG_MACS)
-    weak_hka = detect_weak_algo(detected_hka, STRONG_HOST_KEY_ALGORITHMS)
+    not_recommended_ciphers = detect_not_recommended_algo(detected_ciphers, STRONG_CIPHERS)
+    not_recommended_kex = detect_not_recommended_algo(detected_kex, STRONG_KEX)
+    not_recommended_macs = detect_not_recommended_algo(detected_macs, STRONG_MACS)
+    not_recommended_hka = detect_not_recommended_algo(detected_hka, STRONG_HOST_KEY_ALGORITHMS)
 
     print_algo_list(detected_ciphers, 'ciphers', STRONG_CIPHERS)
     print_algo_list(detected_kex, 'KEX algorithms', STRONG_KEX)
     print_algo_list(detected_macs, 'MACs', STRONG_MACS)
     print_algo_list(detected_hka, 'HostKey algorithms', STRONG_HOST_KEY_ALGORITHMS)
 
-    print_algo_list(weak_ciphers, 'weak ciphers')
-    print_algo_list(weak_kex, 'weak KEX algorithms')
-    print_algo_list(weak_macs, 'weak MACs')
-    print_algo_list(weak_hka, 'weak HostKey algorithms')
+    print_algo_list(not_recommended_ciphers, 'not recommended ciphers')
+    print_algo_list(not_recommended_kex, 'not recommended KEX algorithms')
+    print_algo_list(not_recommended_macs, 'not recommended MACs')
+    print_algo_list(not_recommended_hka, 'not recommended HostKey algorithms')
 
     compression_algos = kexinit_data['compression_algorithms_server_to_client']
     if 'zlib@openssh.com' in compression_algos or 'zlib' in compression_algos:
