@@ -44,40 +44,40 @@ Display help:
 
 Sample output:
 ```
-% ./sshscan.py  sdf.org
+% ./sshscan.py sdf.org
 
 [*] Initiating scan for sdf.org on port 22
 [*] Connected to sdf.org on port 22...
-    [+] Target SSH version is: SSH-2.0-OpenSSH_8.0
-    [+] Retrieving ciphers...
+    [+] Target SSH version is: SSH-2.0-OpenSSH_10.0
+    [+] Retrieving algorithm information...
     [+] Detected ciphers:
-          aes128-ctr                           aes256-ctr
-          aes128-gcm@openssh.com               aes256-gcm@openssh.com
-          aes192-ctr                           chacha20-poly1305@openssh.com
+          chacha20-poly1305@openssh.com        aes128-ctr
+          aes128-gcm@openssh.com               aes192-ctr
+          aes256-gcm@openssh.com               aes256-ctr
     [+] Detected KEX algorithms:
-          curve25519-sha256                    diffie-hellman-group16-sha512
-          curve25519-sha256@libssh.org         diffie-hellman-group18-sha512
-          diffie-hellman-group-exchange-sha256 ecdh-sha2-nistp256
-          diffie-hellman-group14-sha1          ecdh-sha2-nistp384
-          diffie-hellman-group14-sha256        ecdh-sha2-nistp521
+          mlkem768x25519-sha256                ecdh-sha2-nistp256
+          sntrup761x25519-sha512               ecdh-sha2-nistp384
+          sntrup761x25519-sha512@openssh.com   ecdh-sha2-nistp521
+          curve25519-sha256                    ext-info-s
+          curve25519-sha256@libssh.org         kex-strict-s-v00@openssh.com
     [+] Detected MACs:
-          hmac-sha1                            hmac-sha2-512-etm@openssh.com
-          hmac-sha1-etm@openssh.com            umac-128-etm@openssh.com
-          hmac-sha2-256                        umac-128@openssh.com
-          hmac-sha2-256-etm@openssh.com        umac-64-etm@openssh.com
-          hmac-sha2-512                        umac-64@openssh.com
+          umac-64-etm@openssh.com              umac-64@openssh.com
+          umac-128-etm@openssh.com             umac-128@openssh.com
+          hmac-sha2-256-etm@openssh.com        hmac-sha2-256
+          hmac-sha2-512-etm@openssh.com        hmac-sha2-512
+          hmac-sha1-etm@openssh.com            hmac-sha1
     [+] Detected HostKey algorithms:
-          rsa-sha2-256                         ssh-ed25519
-          rsa-sha2-512                         ssh-rsa
+          rsa-sha2-512                         ssh-ed25519
+          rsa-sha2-256
     [-] No weak ciphers detected!
     [+] Detected weak KEX algorithms:
-          diffie-hellman-group14-sha1          ecdh-sha2-nistp384
           ecdh-sha2-nistp256                   ecdh-sha2-nistp521
+          ecdh-sha2-nistp384
     [+] Detected weak MACs:
-          hmac-sha1                            umac-64-etm@openssh.com
-          hmac-sha1-etm@openssh.com            umac-64@openssh.com
+          umac-64-etm@openssh.com              umac-64@openssh.com
+          hmac-sha1-etm@openssh.com            hmac-sha1
     [-] No weak HostKey algorithms detected!
-    [-] Compression is *not* enabled
+    [+] Compression is enabled
 ```
 
 -----
