@@ -80,6 +80,21 @@ Sample output:
     [+] Compression is enabled
 ```
 
+Algorithm Classifications
+=========================
+
+SSHScan categorizes algorithms as either recommended or not recommended based on current cryptographic research and security best practices.
+
+Algorithms flagged as "not recommended" include:
+
+- Cryptographically broken algorithms such as RC4 (bias attacks), 64-bit block ciphers like 3DES and Blowfish (Sweet32 birthday attack), AES-CBC without Encrypt-then-MAC (padding oracle attacks), and algorithms using SHA-1 signatures like ssh-rsa (vulnerable to chosen-prefix collisions)
+
+- Algorithms deprecated due to reduced security margins such as HMAC-SHA1 (theoretically secure but phased out) and UMAC-64 (insufficient birthday security)
+
+- Algorithms not recommended for policy or trust reasons such as NIST P-curves (ecdh-sha2-nistp256/384/521) which are not cryptographically broken but have concerns about their standardization process
+
+For detailed rationale and academic references for each algorithm classification, see [ALGORITHM_GUIDANCE.md](ALGORITHM_GUIDANCE.md).
+
 -----
 This is originally based on https://github.com/evict/SSHScan
 
